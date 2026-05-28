@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Honda RA621H – CPM Visualizer</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<!-- ── Header ──────────────────────────────────────────────────── -->
+<header id="app-header">
+  <div class="header-left">
+    <div class="brand-mark">
+      <svg class="wing" viewBox="0 0 28 28" fill="none">
+        <path d="M2 20 C6 8 14 4 26 6" stroke="#E10600" stroke-width="2.5" stroke-linecap="round"/>
+        <path d="M2 20 C8 14 18 12 26 14" stroke="#E10600" stroke-width="1.5" stroke-linecap="round" opacity=".6"/>
+        <circle cx="4" cy="21" r="2" fill="#E10600"/>
+      </svg>
+      <span class="brand-title">Honda <span>RA621H</span></span>
+    </div>
+    <span class="header-badge">DAG · Kahn's · CPM</span>
+  </div>
+  <div id="header-stats" class="header-stats"></div>
+</header>
+
+<!-- ── Tab Bar ─────────────────────────────────────────────────── -->
+<nav id="tab-bar">
+  <button class="tab-btn active" data-tab="dag">
+    <span class="tab-icon">⬡</span> DAG View
+  </button>
+  <button class="tab-btn" data-tab="kahn">
+    <span class="tab-icon">▶</span> Kahn's Algorithm
+  </button>
+  <button class="tab-btn" data-tab="gantt">
+    <span class="tab-icon">▬</span> Gantt / CPM
+  </button>
+  <button class="tab-btn" data-tab="table">
+    <span class="tab-icon">⊞</span> CPM Table
+    <span class="tab-count">103</span>
+  </button>
+  <button class="tab-btn" data-tab="stats">
+    <span class="tab-icon">◈</span> Analysis
+  </button>
+</nav>
+
+<!-- ── Main ───────────────────────────────────────────────────── -->
+<main id="main">
+
+  <!-- ── DAG VIEW ──────────────────────────────────────────────── -->
+  <div id="view-dag" class="view active">
+    <div class="panel-layout">
+
+      <!-- Sidebar -->
+      <aside class="sidebar">
+        <div class="sidebar-section">
+          <div class="sidebar-title">Display Options</div>
+
+          <label class="check-row">
+            <input type="checkbox" id="dag-cp-only">
+            <label>Critical path only</label>
+          </label>
+
+          <div style="margin-top:.75rem">
+            <div class="sidebar-title" style="margin-bottom:.4rem">Highlight Subsystem</div>
+            <select id="dag-subsys-filter" style="width:100%"></select>
+          </div>
+        </div>
+
+        <div class="sidebar-section">
+          <div class="sidebar-title">Navigate</div>
+          <div class="anim-btn-row" style="display:flex;flex-direction:column;gap:.4rem">
+            <button id="dag-focus-cp" class="anim-btn primary">Focus Critical Path</button>
+            <button id="dag-reset" class="anim-btn">Reset View</button>
+          </div>
+        </div>
+
+        <div class="sidebar-section" style="flex:1">
+          <div class="sidebar-title">Legend – Subsystems</div>
+          <div id="dag-legend"></div>
+          <div style="margin-top:1rem">
+            <div class="sidebar-title" style="margin-bottom:.4rem">Node Guide</div>
+            <div class="legend-row">
+              <div class="legend-dot" style="width:14px;height:14px;border:2px solid #FFD700;background:#E10600"></div>
+              <span class="legend-label" style="font-size:.7rem">Critical path (gold border)</span>
+            </div>
+            <div class="legend-row">
+              <div class="legend-dot" style="background:#333"></div>
+              <span class="legend-label" style="font-size:.7rem">Non-critical node</span>
+            </div>
+            <div class="legend-row" style="margin-top:.5rem">
+              <div style="width:24px;height:2px;background:#E10600;flex-shrink:0"></div>
+              <span class="legend-label" style="font-size:.7rem">Critical edge</span>
+            </div>
+            <div class="legend-row">
+              <div style="width:24px;height:1px;background:#5A5A72;flex-shrink:0"></div>
+              <span class="legend-label" style="font-size:.7rem">Regular dependency</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="sidebar-section">
+          <div class="sidebar-title" style="margin-bottom:.3rem">Interaction</div>
+          <div style="font-family:var(--mono);font-size:.65rem;color:var(--text3);line-height:1.9">
+            <div>🖱 Drag – Pan canvas</div>
+            <div>⚙ Scroll – Zoom</div>
+            <div>Click node – Details</div>
+          </div>
+        </div>
+      </aside>
+
+      <!-- Canvas -->
+      <div class="canvas-area">
+        <canvas id="dag-canvas"></canvas>
+
+        <div class="canvas-controls">
+          <button class="ctrl-btn" id="dag-zoom-in" title="Zoom In">+</button>
+          <button class="ctrl-btn" id="dag-zoom-out" title="Zoom Out">−</button>
+        </div>
+
+        <div class="canvas-info">
+          103 nodes · 216 edges · scroll to zoom · drag to pan
+        </div>
+
+        <!-- Node detail panel -->
+        <div id="node-detail"></div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ── KAHN'S ALGORITHM VIEW ──────────────────────────────────── -->
+  <div id="view-kahn" class="view">
+    <div class="kahn-layout">
+
+      <div class="kahn-stage">
+        <canvas id="kahn-canvas" style="width:100%;height:100%;cursor:grab"></canvas>
+      </div>
+
+      <aside class="kahn-info-panel">
+        <div class="sidebar-section">
+          <div class="sidebar-title" style="font-size:.8rem;color:var(--text2);margin-bottom:.2rem">
+            Kahn's Topological Sort
+          </div>
+          <div style="font-family:var(--mono);font-size:.65rem;color:var(--text2);line-height:1.6;margin-bottom:.75rem">
+            BFS-based algorithm. Nodes with in-degree 0 enter the queue first. Removes nodes layer by layer, reducing successors' in-degree until all are processed.
+          </div>
+        </div>
+
+        <div class="anim-controls">
+          <div id="kahn-step-display" class="step-display">Step 1 / –</div>
+
+          <input type="range" id="kahn-progress" min="0" max="100" value="0" style="width:100%">
+
+          <div class="anim-btn-row">
+            <button class="anim-btn" id="kahn-step-back">◀ Back</button>
+            <button class="anim-btn primary" id="kahn-play-btn">▶ Play</button>
+            <button class="anim-btn" id="kahn-step-fwd">Fwd ▶</button>
+          </div>
+
+          <div class="anim-btn-row">
+            <button class="anim-btn" id="kahn-reset-btn">↺ Reset</button>
+          </div>
+
+          <div>
+            <div class="sidebar-title" style="margin-bottom:.3rem">Speed</div>
+            <input type="range" id="kahn-speed" min="0" max="4" value="2" step="1" style="width:100%">
+            <div style="display:flex;justify-content:space-between;font-family:var(--mono);font-size:.6rem;color:var(--text2);margin-top:.2rem">
+              <span>Slow</span><span>Fast</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="sidebar-section">
+          <div id="kahn-description" style="font-family:var(--mono);font-size:.7rem;color:var(--text);line-height:1.5;min-height:40px">
+            Tekan Play untuk memulai animasi Kahn's Algorithm...
+          </div>
+        </div>
+
+        <!-- Color guide -->
+        <div class="sidebar-section">
+          <div class="sidebar-title">Node State</div>
+          <div class="legend-row"><div class="legend-dot" style="background:#3A3A60"></div><span class="legend-label">Waiting (belum diproses)</span></div>
+          <div class="legend-row"><div class="legend-dot" style="background:#2196F3"></div><span class="legend-label">In Queue (ready)</span></div>
+          <div class="legend-row"><div class="legend-dot" style="background:#E10600"></div><span class="legend-label">Processing (current)</span></div>
+          <div class="legend-row"><div class="legend-dot" style="background:#4CAF50"></div><span class="legend-label">Done (sorted)</span></div>
+        </div>
+
+        <div class="queue-list">
+          <div class="queue-title">Current Queue</div>
+          <div id="kahn-queue-list"></div>
+        </div>
+
+        <div class="processed-list">
+          <div id="kahn-processed-list"></div>
+        </div>
+
+      </aside>
+    </div>
+  </div>
+
+  <!-- ── GANTT / CPM VIEW ───────────────────────────────────────── -->
+  <div id="view-gantt" class="view">
+    <div class="table-toolbar">
+      <span style="font-family:var(--cond);font-size:.72rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text2)">
+        CPM Gantt Chart
+      </span>
+      <label class="check-row" style="margin-bottom:0">
+        <input type="checkbox" id="gantt-cp-toggle">
+        <label>Critical path only</label>
+      </label>
+      <div style="margin-left:auto;font-family:var(--mono);font-size:.65rem;color:var(--text2)">
+        <span style="color:#E10600">■</span> Critical &nbsp;
+        <span style="color:#6060A0">■</span> Float slack &nbsp;
+        <span style="color:#FFD700">★</span> CP node
+      </div>
+    </div>
+    <div class="gantt-wrap">
+      <svg id="gantt-svg"></svg>
+    </div>
+  </div>
+
+  <!-- ── CPM TABLE VIEW ────────────────────────────────────────── -->
+  <div id="view-table" class="view">
+    <div class="table-toolbar">
+      <div class="search-box">
+        <span style="color:var(--text2)">🔍</span>
+        <input type="text" id="table-search" placeholder="Search component...">
+      </div>
+      <div class="filter-pills">
+        <button class="pill active" data-filter="all">All</button>
+        <button class="pill" data-filter="cp">Critical Path</button>
+        <button class="pill" data-filter="noncp">Non-Critical</button>
+      </div>
+      <div style="margin-left:auto;font-family:var(--mono);font-size:.65rem;color:var(--text2)">
+        Click column headers to sort
+      </div>
+    </div>
+    <div class="table-wrap">
+      <table class="cpm-table">
+        <thead>
+          <tr>
+            <th data-col="id">ID</th>
+            <th data-col="name">Component</th>
+            <th data-col="sub">Subsystem</th>
+            <th data-col="dur">Dur (h)</th>
+            <th data-col="ES">ES</th>
+            <th data-col="EF">EF</th>
+            <th data-col="LS">LS</th>
+            <th data-col="LF">LF</th>
+            <th data-col="float">Float</th>
+            <th>CP</th>
+          </tr>
+        </thead>
+        <tbody id="cpm-table-body"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ── STATS / ANALYSIS VIEW ─────────────────────────────────── -->
+  <div id="view-stats" class="view">
+    <div id="stats-cards" class="stats-grid"></div>
+
+    <div class="charts-row" style="flex:1">
+      <div class="chart-panel">
+        <div class="chart-title">Total Float Distribution</div>
+        <div class="chart-canvas-wrap">
+          <canvas id="float-hist"></canvas>
+        </div>
+        <div style="font-family:var(--mono);font-size:.65rem;color:var(--text2);margin-top:.5rem">
+          <span style="color:#E10600">■</span> Float = 0 → Critical Path &nbsp;&nbsp;
+          <span style="color:#2196F3">■</span> Float > 0 → Slack available
+        </div>
+      </div>
+      <div class="chart-panel">
+        <div class="chart-title">Total Duration by Subsystem</div>
+        <div class="chart-canvas-wrap">
+          <canvas id="subsys-chart"></canvas>
+        </div>
+        <div style="font-family:var(--mono);font-size:.65rem;color:var(--text2);margin-top:.5rem">
+          <span style="color:#E10600">■</span> Critical component proportion per subsystem
+        </div>
+      </div>
+    </div>
+
+    <!-- CPM explanation -->
+    <div style="padding:1.5rem 2rem;border-top:1px solid var(--border);background:var(--bg2)">
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:1.5rem">
+        <div>
+          <div style="font-family:var(--cond);font-size:.72rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#A0A0BC;margin-bottom:.6rem">CPM Formula</div>
+          <div style="font-family:var(--mono);font-size:.73rem;color:#D8D8E8;line-height:2.1">
+            <div><span style="color:var(--gold)">ES[v]</span> = max(EF[u]) untuk semua predecessor u</div>
+            <div><span style="color:var(--gold)">EF[v]</span> = ES[v] + duration[v]</div>
+            <div><span style="color:var(--gold)">LF[v]</span> = min(LS[w]) untuk semua successor w</div>
+            <div><span style="color:var(--gold)">LS[v]</span> = LF[v] − duration[v]</div>
+            <div><span style="color:var(--red)">Float</span> = LS[v] − ES[v] = LF[v] − EF[v]</div>
+            <div><span style="color:var(--red)">Critical</span> = Float == 0</div>
+          </div>
+        </div>
+        <div>
+          <div style="font-family:var(--cond);font-size:.72rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#A0A0BC;margin-bottom:.6rem">Kahn's Algorithm</div>
+          <div style="font-family:var(--mono);font-size:.73rem;color:#D8D8E8;line-height:2.1">
+            <div>1. Hitung in-degree semua node</div>
+            <div>2. Queue: semua node in-degree = 0</div>
+            <div>3. Dequeue → tambah ke topo_order</div>
+            <div>4. Kurangi in-degree successor</div>
+            <div>5. Jika in-degree → 0, masuk queue</div>
+            <div><span style="color:var(--gold)">Valid</span> jika len(order) == total nodes</div>
+          </div>
+        </div>
+        <div>
+          <div style="font-family:var(--cond);font-size:.72rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#A0A0BC;margin-bottom:.6rem">DAG Properties</div>
+          <div style="font-family:var(--mono);font-size:.73rem;color:#D8D8E8;line-height:2.1">
+            <div>D – Directed (berarah)</div>
+            <div>A – Acyclic (tanpa siklus)</div>
+            <div>G – Graph (berbobot)</div>
+            <div><span style="color:#4CAF50">is_dag = True ✓</span></div>
+            <div>Avg in-degree = 2.10</div>
+            <div>Avg out-degree = 2.10</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<!-- ── Tooltip ─────────────────────────────────────────────────── -->
+<div id="tooltip"></div>
+
+<!-- ── Scripts ─────────────────────────────────────────────────── -->
+<script src="data/graph-data.js"></script>
+<script src="js/dag.js"></script>
+<script src="js/kahn.js"></script>
+<script src="js/charts.js"></script>
+<script src="js/app.js"></script>
+
+</body>
+</html>
